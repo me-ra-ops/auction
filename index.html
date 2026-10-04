@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bid-to-Build | Yagna Dhruva '26</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#120303;--panel:#210205;--gold:#e0b978;--gold2:#c69a5a;--blush:#e8d0bd;--mute:#bfa392;--dim:#8f6a38;--wine:#7a1019;--line:rgba(198,154,90,.35)}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--blush);font:400 1rem/1.55 'Inter',sans-serif;background:radial-gradient(ellipse at 50% -10%,#3a0710 0%,#260206 35%,var(--bg) 75%) fixed}
+h1,h2,h3{font-family:'Cinzel',serif;margin:0;letter-spacing:.04em}
+main{max-width:46rem;margin:0 auto;padding:1.5rem 1.25rem 4rem}
+header{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1.25rem;border-bottom:1px solid var(--line);margin-bottom:2rem}
+.brand h1{font-size:1.25rem;font-weight:900;color:var(--gold)}
+.brand p{margin:.15rem 0 0;color:var(--dim);font-size:.8rem;letter-spacing:.18em;text-transform:uppercase}
+.who{color:var(--mute);font-size:.85rem;text-align:right}
+section{margin-bottom:2.25rem}
+h2{font-size:1.05rem;font-weight:700;color:var(--gold);margin-bottom:.9rem}
+.lbl{margin:0 0 .3rem;font:600 .68rem 'Inter',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:var(--dim)}
+.purse{display:flex;justify-content:space-between;align-items:end;border:1px solid var(--line);background:rgba(33,2,5,.75);padding:1rem 1.25rem}
+.purse .num{font:700 2rem 'Cinzel',serif;color:var(--gold)}
+.stage{border:1px solid var(--line);background:rgba(33,2,5,.75);padding:2rem 1.5rem;text-align:center;box-shadow:0 0 40px rgba(198,154,90,.12)}
+.item{font:900 clamp(2.4rem,9vw,4.2rem)/1 'Cinzel',serif;letter-spacing:.05em;margin:.3rem 0 1rem;color:transparent;background:linear-gradient(135deg,#e8d0bd 0%,#e0b978 40%,#c69a5a 100%);-webkit-background-clip:text;background-clip:text;overflow-wrap:anywhere}
+.timer{font:700 1.6rem 'Cinzel',serif;color:var(--gold);margin-bottom:1.25rem}
+.timer.low{color:#ff8a8a}
+.idle{color:var(--mute);margin:0}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}
+.stage .row{justify-content:center}
+input,select{background:rgba(18,3,3,.7);color:var(--blush);border:1px solid var(--line);padding:.75rem .9rem;font:500 .95rem 'Inter',sans-serif;border-radius:2px;min-width:0}
+input::placeholder{color:var(--dim)}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:2px}
+.row input{flex:1 1 9rem}
+button{cursor:pointer;background:transparent;color:var(--gold);border:1px solid var(--line);padding:.75rem 1.25rem;font:700 .75rem 'Inter',sans-serif;letter-spacing:.18em;text-transform:uppercase;border-radius:2px;transition:background .2s,color .2s,border-color .2s}
+button:hover,button:focus-visible{border-color:var(--gold);background:var(--gold2);color:#260206;outline:none}
+button.solid{background:var(--gold2);color:#260206;border-color:var(--gold2)}
+button.solid:hover,button.solid:focus-visible{background:var(--gold);border-color:var(--gold)}
+button.x{padding:.35rem .6rem;letter-spacing:.08em;color:var(--mute)}
+button.x:hover{background:var(--wine);border-color:var(--wine);color:var(--blush)}
+.msg{min-height:1.4rem;margin:.8rem 0 0;color:var(--gold);font-size:.9rem}
+.msg.err{color:#ff8a8a}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.7rem 0;border-bottom:1px solid rgba(198,154,90,.18)}
+li span:last-child{color:var(--gold);text-align:right}
+li.win{background:rgba(198,154,90,.12);padding-inline:.75rem;border-left:3px solid var(--gold)}
+.empty{color:var(--dim);padding:.5rem 0}
+.tabs{display:flex;gap:.6rem;margin-bottom:1.25rem}
+.tabs button{flex:1}
+.tabs button[aria-selected=true]{border-color:var(--gold);background:rgba(198,154,90,.14)}
+.card{max-width:26rem;margin:3rem auto 0}
+.card form{display:grid;gap:.75rem}
+.stack{display:grid;gap:.75rem}
+.grid2{display:grid;gap:2rem}
+@media(min-width:760px){main.wide{max-width:62rem}.grid2{grid-template-columns:1fr 1fr}}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main id="app">
+<header><div class="brand"><h1>Tool Auction</h1><p>Yagna Dhruva '26</p></div><div class="who"><span id="who"></span> <button type="button" class="x" id="out" hidden>Log out</button></div></header>
+<div id="view"></div>
+</main>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n).toLocaleString('en-IN'),sock=io();
+let me=null,S=null,off=0,mode='team';
+const rem=()=>S&&S.round?S.round.endsAt-(Date.now()+off):0;
+const clock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const list=(a,f,e)=>a.length?'<ul>'+a.map(f).join('')+'</ul>':'<p class="empty">'+e+'</p>';
+const resHtml=r=>r?list(r,x=>`<li class="${me&&!me.admin&&x.w.includes(me.name)?'win':''}"><span>${esc(x.name)}<br><small>${esc(x.w.join(', '))}</small></span><span>${fmt(x.a)}</span></li>`,'No bids were placed.'):'';
+
+sock.on('connect',()=>{if(!me)return;me.admin?sock.emit('admin',me.pass,()=>{}):sock.emit('join',{name:me.name,code:me.code},()=>{})});
+sock.on('state',s=>{S=s;off=s.now-Date.now();if(me)me.admin?paintAdmin():paintTeam()});
+setInterval(()=>{if(!me||!S)return;me.admin?paintStatus():paintRound()},250);
+
+/* ---------- login ---------- */
+function login(){
+ $('#who').textContent='';$('#out').hidden=true;$('#app').classList.remove('wide');
+ $('#view').innerHTML=`<div class="card"><div class="tabs" role="tablist">
+  <button type="button" role="tab" data-m="team">Team</button><button type="button" role="tab" data-m="admin">Admin</button></div>
+  <form id="lf"></form><p class="msg err" id="lerr"></p></div>`;
+ const draw=()=>{document.querySelectorAll('[data-m]').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===mode));
+  $('#lf').innerHTML=mode==='team'?`<input id="n" placeholder="Team name" autocomplete="off" required><input id="c" placeholder="Team code" autocomplete="off" required><button class="solid">Join auction</button>`
+   :`<input id="p" type="password" placeholder="Admin password" required><button class="solid">Open admin panel</button>`};
+ document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;draw()});draw();
+ $('#lf').onsubmit=e=>{e.preventDefault();const bad=()=>$('#lerr').textContent=mode==='team'?'Team name or code is wrong. Check with the organisers.':'Wrong password.';
+  if(mode==='team'){const name=$('#n').value.trim(),code=$('#c').value.trim();
+   sock.emit('join',{name,code},ok=>{if(!ok)return bad();me={name,code};teamShell()})}
+  else{const pass=$('#p').value;sock.emit('admin',pass,ok=>{if(!ok)return bad();me={admin:true,pass};adminShell()})}}}
+
+/* ---------- team ---------- */
+function teamShell(){
+ $('#app').classList.remove('wide');$('#who').textContent=me.name;$('#out').hidden=false;
+ $('#view').innerHTML=`
+ <section class="purse"><div><p class="lbl">Budget left</p><div class="num" id="left">-</div></div></section>
+ <section><div class="stage" id="stage">
+  <div id="idle"><p class="idle" id="idleTxt">Waiting for the next tool.</p></div>
+  <div id="live" hidden><p class="lbl">Now bidding</p><div class="item" id="rname"></div><div class="timer" id="t"></div>
+   <form class="row" id="bf"><input id="amt" type="number" min="1" step="1" inputmode="numeric" placeholder="Your bid" required><button class="solid">Place bid</button></form></div>
+  <p class="msg" id="msg" role="status"></p></div></section>
+ <section><h2>Your bids</h2><div id="mine"></div></section>
+ <section id="resBox" hidden><h2>Results</h2><div id="res"></div></section>`;
+ $('#bf').onsubmit=e=>{e.preventDefault();sock.emit('bid',{amount:$('#amt').value},m=>{const el=$('#msg');el.textContent=m;el.className='msg'+(/^Bid saved/.test(m)?'':' err');if(/^Bid saved/.test(m))$('#amt').value=''})};
+ if(S)paintTeam();
+}
+function paintRound(){
+ const open=!!(S.round&&rem()>0&&!S.res);
+ $('#live').hidden=!open;$('#idle').hidden=open;
+ $('#idleTxt').textContent=S.res?'Bidding is closed. Results are below.':'Waiting for the next tool.';
+ if(open){$('#rname').textContent=S.round.name;const t=$('#t');t.textContent=clock(rem());t.classList.toggle('low',rem()<=10000)}
+ else $('#msg').textContent='';
+}
+function paintTeam(){
+ if(!$('#left'))return;
+ $('#left').textContent=fmt(S.left);
+ $('#mine').innerHTML=list(S.mine,b=>`<li><span>${esc(b.name)}</span><span>${fmt(b.a)}</span></li>`,'You have not placed any bids yet.');
+ $('#resBox').hidden=!S.res;$('#res').innerHTML=resHtml(S.res);paintRound();
+}
+
+/* ---------- admin ---------- */
+const emit=(a,v)=>sock.emit(a,v);
+function adminShell(){
+ $('#app').classList.add('wide');$('#who').textContent='Admin';$('#out').hidden=false;
+ $('#view').innerHTML=`
+ <section><h2>Round</h2><div class="stack">
+  <div class="row"><select id="sel" aria-label="Item to auction"></select><input id="secs" type="number" min="5" value="60" aria-label="Seconds" style="max-width:6rem"></div>
+  <div class="row"><button class="solid" data-act="open">Open round</button><button data-act="close">Close now</button><button data-act="reveal">Reveal results</button><button class="x" data-act="reset">Reset all bids</button></div>
+  <p class="msg" id="status"></p></div></section>
+ <div class="grid2"><div>
+  <section><h2>Teams</h2><form class="row" id="tf"><input id="tn" placeholder="Team name" required><input id="tc" placeholder="Code" required><input id="tb" type="number" min="1" placeholder="Budget" value="100000"><button>Add team</button></form><div id="teams"></div></section>
+  <section><h2>Suggestions</h2><div id="sug"></div></section></div><div>
+  <section><h2>Tools</h2><form class="row" id="if"><input id="in" placeholder="Tool name" required><button>Add tool</button></form><div id="items"></div></section>
+  <section><h2>Bids</h2><div id="bids"></div></section>
+  <section id="resBox" hidden><h2>Results</h2><div id="res"></div></section></div></div>`;
+ $('#tf').onsubmit=e=>{e.preventDefault();sock.emit('addTeam',{name:$('#tn').value,code:$('#tc').value,budget:$('#tb').value});$('#tn').value=$('#tc').value=''};
+ $('#if').onsubmit=e=>{e.preventDefault();emit('addItem',$('#in').value);$('#in').value=''};
+ $('#view').onclick=e=>{const b=e.target.closest('button[data-act],button[data-a]');if(!b)return;
+  if(b.dataset.a)return emit(b.dataset.a,JSON.parse(b.dataset.v));
+  const a=b.dataset.act;
+  if(a==='open'){const id=+$('#sel').value;if(id)sock.emit('open',{id,secs:+$('#secs').value||60})}
+  else if(a==='close')emit('close');
+  else if(a==='reveal'){if(confirm('Reveal results? Bidding will end.'))emit('reveal')}
+  else if(a==='reset'){if(confirm('Clear every bid and results?'))emit('reset')}};
+ if(S)paintAdmin();
+}
+const del=(a,v)=>`<button class="x" data-a="${a}" data-v='${esc(JSON.stringify(v))}' aria-label="Remove">Remove</button>`;
+function paintStatus(){const el=$('#status');if(!el)return;el.textContent=S.round&&rem()>0?`Open: ${S.round.name}, ${clock(rem())} left`:(S.res?'Results revealed.':'No round is open.')}
+function paintAdmin(){
+ if(!$('#sel'))return;
+ const v=$('#sel').value;
+ $('#sel').innerHTML=S.items.map(i=>`<option value="${i.id}">${esc(i.name)}${S.cnt[i.id]?' ('+S.cnt[i.id]+' bids)':''}</option>`).join('');
+ if(v&&S.items.some(i=>i.id==v))$('#sel').value=v;
+ $('#teams').innerHTML=list(Object.entries(S.teams),([n,t])=>`<li><span>${esc(n)}<br><small>code ${esc(t.code)}, budget ${fmt(t.budget)}</small></span>${del('delTeam',n)}</li>`,'No teams yet.');
+ $('#items').innerHTML=list(S.items,i=>`<li><span>${esc(i.name)}</span>${del('delItem',i.id)}</li>`,'No tools yet.');
+ $('#sug').innerHTML=list(S.sug,(s,i)=>`<li><span>${esc(s)}</span><span class="row"><button class="x" data-a="addSug" data-v="${i}">Add</button>${del('delSug',i)}</span></li>`,'No suggestions.');
+ const rows=S.items.map(i=>({n:i.name,b:Object.entries(S.bids).filter(([,m])=>m[i.id]).map(([t,m])=>[t,m[i.id]]).sort((a,b)=>b[1]-a[1])})).filter(r=>r.b.length);
+ $('#bids').innerHTML=list(rows,r=>`<li><span>${esc(r.n)}</span><span>${r.b.map(([t,a])=>esc(t)+' '+fmt(a)).join('<br>')}</span></li>`,'No bids yet.');
+ $('#resBox').hidden=!S.res;$('#res').innerHTML=resHtml(S.res);paintStatus();
+}
+$('#out').onclick=()=>{me=null;S=null;sock.disconnect();sock.connect();login()};
+login();
+</script></body></html>
