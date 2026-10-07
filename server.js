@@ -1,8 +1,12 @@
 const express=require('express'),http=require('http'),path=require('path'),{Server}=require('socket.io');
 const {createClient}=require('@supabase/supabase-js');
 const app=express(),srv=http.createServer(app),io=new Server(srv);
+<<<<<<< HEAD
 app.get('/',(q,r)=>r.sendFile(path.join(__dirname,'index.html')));app.get('/health',(q,r)=>r.send('ok'));
 const ADMIN=process.env.ADMIN_PASS||'admin';
+=======
+app.get('/',(q,r)=>r.sendFile(require('path').join(__dirname,'index.html')));app.get('/health',(q,r)=>r.send('ok'));const ADMIN=process.env.ADMIN_PASS||'admin';
+>>>>>>> f3e227921ce3d5628444a4e6afc94b3324f87b0e
 const sb=process.env.SUPABASE_URL?createClient(process.env.SUPABASE_URL,process.env.SUPABASE_KEY):null;
 let S={teams:{},items:[],sug:[],round:null,bids:{},results:{},last:null,min:0,n:1};
 const seed=()=>{S.items=['React','Vue','Angular','Next.js','Tailwind CSS','Bootstrap','Node.js','Express','MongoDB','Firebase','GitHub','Figma','Vercel','Vite','TypeScript'].map(name=>({id:S.n++,name}))};
