@@ -93,8 +93,8 @@ function teamShell(){
  $('#view').innerHTML=`
  <section class="purse"><div><p class="lbl">Budget left</p><div class="num" id="left">-</div></div></section>
  <section><div class="stage" id="stage">
-  <div id="idle"><p class="idle" id="idleTxt">Waiting for the next tool.</p></div>
-  <div id="live" hidden><p class="lbl">Now bidding</p><div class="item" id="rname"></div><div class="timer" id="t"></div>
+  <div id="idle"><p class="timer" id="idleLast" hidden></p><p class="idle" id="idleTxt">Waiting for the next tool.</p></div>
+  <div id="live" hidden><p class="lbl">Now bidding</p><div class="item" id="rname"></div><div class="timer" id="t"></div><p class="lbl" id="minTxt"></p>
    <form class="row" id="bf"><input id="amt" type="number" min="1" step="1" inputmode="numeric" placeholder="Your bid" required><button class="solid">Place bid</button></form></div>
   <p class="msg" id="msg" role="status"></p></div></section>
  <section><h2>Your bids</h2><div id="mine"></div></section>
@@ -102,18 +102,20 @@ function teamShell(){
  $('#bf').onsubmit=e=>{e.preventDefault();sock.emit('bid',{amount:$('#amt').value},m=>{const el=$('#msg');el.textContent=m;el.className='msg'+(/^Bid saved/.test(m)?'':' err');if(/^Bid saved/.test(m))$('#amt').value=''})};
  if(S)paintTeam();
 }
+const lastTxt=l=>l?(l.none?`No bids on ${l.name}.`:`${l.name} sold to ${l.w.join(', ')} for ${fmt(l.a)}.${me&&!me.admin&&l.w.includes(me.name)?' You won it!':''}`):'';
 function paintRound(){
- const open=!!(S.round&&rem()>0&&!S.res);
+ const open=!!(S.round&&rem()>0);
  $('#live').hidden=!open;$('#idle').hidden=open;
- $('#idleTxt').textContent=S.res?'Bidding is closed. Results are below.':'Waiting for the next tool.';
- if(open){$('#rname').textContent=S.round.name;const t=$('#t');t.textContent=clock(rem());t.classList.toggle('low',rem()<=10000)}
+ const il=$('#idleLast');il.textContent=lastTxt(S.last);il.hidden=!S.last;
+ if(open){$('#rname').textContent=S.round.name;const t=$('#t');t.textContent=clock(rem());t.classList.toggle('low',rem()<=10000);
+  $('#minTxt').textContent=S.min?'Minimum bid: '+fmt(S.min):'';$('#amt').min=Math.max(1,S.min||1)}
  else $('#msg').textContent='';
 }
 function paintTeam(){
  if(!$('#left'))return;
  $('#left').textContent=fmt(S.left);
- $('#mine').innerHTML=list(S.mine,b=>`<li><span>${esc(b.name)}</span><span>${fmt(b.a)}</span></li>`,'You have not placed any bids yet.');
- $('#resBox').hidden=!S.res;$('#res').innerHTML=resHtml(S.res);paintRound();
+ $('#mine').innerHTML=list(S.mine,b=>`<li><span>${esc(b.name)}</span><span>${fmt(b.a)}<br><small>${b.st}</small></span></li>`,'You have not placed any bids yet.');
+ $('#resBox').hidden=!S.res.length;$('#res').innerHTML=resHtml(S.res);paintRound();
 }
 
 /* ---------- admin ---------- */
@@ -123,7 +125,8 @@ function adminShell(){
  $('#view').innerHTML=`
  <section><h2>Round</h2><div class="stack">
   <div class="row"><select id="sel" aria-label="Item to auction"></select><input id="secs" type="number" min="5" value="60" aria-label="Seconds" style="max-width:6rem"></div>
-  <div class="row"><button class="solid" data-act="open">Open round</button><button data-act="close">Close now</button><button data-act="reveal">Reveal results</button><button class="x" data-act="reset">Reset all bids</button></div>
+  <div class="row"><button class="solid" data-act="open">Open round</button><button data-act="close">End round now</button><button class="x" data-act="reset">Reset all bids</button></div>
+  <form class="row" id="mf"><input id="min" type="number" min="0" placeholder="Minimum bid (all tools)" aria-label="Minimum bid"><button>Set minimum</button></form>
   <p class="msg" id="status"></p></div></section>
  <div class="grid2"><div>
   <section><h2>Teams</h2><form class="row" id="tf"><input id="tn" placeholder="Team name" required><input id="tc" placeholder="Code" required><input id="tb" type="number" min="1" placeholder="Budget" value="100000"><button>Add team</button></form><div id="teams"></div></section>
@@ -133,28 +136,28 @@ function adminShell(){
   <section id="resBox" hidden><h2>Results</h2><div id="res"></div></section></div></div>`;
  $('#tf').onsubmit=e=>{e.preventDefault();sock.emit('addTeam',{name:$('#tn').value,code:$('#tc').value,budget:$('#tb').value});$('#tn').value=$('#tc').value=''};
  $('#if').onsubmit=e=>{e.preventDefault();emit('addItem',$('#in').value);$('#in').value=''};
+ $('#mf').onsubmit=e=>{e.preventDefault();emit('setMin',$('#min').value)};
  $('#view').onclick=e=>{const b=e.target.closest('button[data-act],button[data-a]');if(!b)return;
   if(b.dataset.a)return emit(b.dataset.a,JSON.parse(b.dataset.v));
   const a=b.dataset.act;
   if(a==='open'){const id=+$('#sel').value;if(id)sock.emit('open',{id,secs:+$('#secs').value||60})}
   else if(a==='close')emit('close');
-  else if(a==='reveal'){if(confirm('Reveal results? Bidding will end.'))emit('reveal')}
-  else if(a==='reset'){if(confirm('Clear every bid and results?'))emit('reset')}};
+  else if(a==='reset'){if(confirm('Clear every bid and every sold result?'))emit('reset')}};
  if(S)paintAdmin();
 }
 const del=(a,v)=>`<button class="x" data-a="${a}" data-v='${esc(JSON.stringify(v))}' aria-label="Remove">Remove</button>`;
-function paintStatus(){const el=$('#status');if(!el)return;el.textContent=S.round&&rem()>0?`Open: ${S.round.name}, ${clock(rem())} left`:(S.res?'Results revealed.':'No round is open.')}
+function paintStatus(){const el=$('#status');if(!el)return;el.textContent=S.round&&rem()>0?`Open: ${S.round.name}, ${clock(rem())} left`:(S.last?lastTxt(S.last):'No round is open.')}
 function paintAdmin(){
  if(!$('#sel'))return;
  const v=$('#sel').value;
- $('#sel').innerHTML=S.items.map(i=>`<option value="${i.id}">${esc(i.name)}${S.cnt[i.id]?' ('+S.cnt[i.id]+' bids)':''}</option>`).join('');
+ $('#sel').innerHTML=S.items.map(i=>`<option value="${i.id}"${S.sold.includes(String(i.id))?' disabled':''}>${esc(i.name)}${S.sold.includes(String(i.id))?' (sold)':S.cnt[i.id]?' ('+S.cnt[i.id]+' bids)':''}</option>`).join('');
  if(v&&S.items.some(i=>i.id==v))$('#sel').value=v;
  $('#teams').innerHTML=list(Object.entries(S.teams),([n,t])=>`<li><span>${esc(n)}<br><small>code ${esc(t.code)}, budget ${fmt(t.budget)}</small></span>${del('delTeam',n)}</li>`,'No teams yet.');
  $('#items').innerHTML=list(S.items,i=>`<li><span>${esc(i.name)}</span>${del('delItem',i.id)}</li>`,'No tools yet.');
  $('#sug').innerHTML=list(S.sug,(s,i)=>`<li><span>${esc(s)}</span><span class="row"><button class="x" data-a="addSug" data-v="${i}">Add</button>${del('delSug',i)}</span></li>`,'No suggestions.');
  const rows=S.items.map(i=>({n:i.name,b:Object.entries(S.bids).filter(([,m])=>m[i.id]).map(([t,m])=>[t,m[i.id]]).sort((a,b)=>b[1]-a[1])})).filter(r=>r.b.length);
  $('#bids').innerHTML=list(rows,r=>`<li><span>${esc(r.n)}</span><span>${r.b.map(([t,a])=>esc(t)+' '+fmt(a)).join('<br>')}</span></li>`,'No bids yet.');
- $('#resBox').hidden=!S.res;$('#res').innerHTML=resHtml(S.res);paintStatus();
+ $('#resBox').hidden=!S.res.length;$('#res').innerHTML=resHtml(S.res);paintStatus();if(document.activeElement!==$('#min'))$('#min').value=S.min||'';
 }
 $('#out').onclick=()=>{me=null;S=null;sock.disconnect();sock.connect();login()};
 login();
